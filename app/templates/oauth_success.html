@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OAuth Verification Successful</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+            text-align: center;
+            animation: slideIn 0.4s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: #10b981;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 24px;
+            animation: scaleIn 0.5s ease-out 0.2s backwards;
+        }
+        
+        @keyframes scaleIn {
+            from {
+                transform: scale(0);
+            }
+            to {
+                transform: scale(1);
+            }
+        }
+        
+        .success-icon svg {
+            width: 48px;
+            height: 48px;
+            stroke: white;
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+        }
+        
+        h1 {
+            color: #1f2937;
+            font-size: 28px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        
+        .message {
+            color: #6b7280;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+        
+        .details {
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+            text-align: left;
+        }
+        
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+        
+        .detail-label {
+            color: #6b7280;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .detail-value {
+            color: #1f2937;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .close-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+        
+        .close-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .close-btn:active {
+            transform: translateY(0);
+        }
+        
+        .footer {
+            margin-top: 24px;
+            color: #9ca3af;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon">
+            <svg viewBox="0 0 24 24">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+        </div>
+        
+        <h1>Authorization Successful!</h1>
+        <p class="message">
+            Your account has been successfully connected. You can now close this window and return to the application.
+        </p>
+        
+        <div class="details">
+            <div class="detail-item">
+                <span class="detail-label">Status</span>
+                <span class="detail-value">Verified ✓</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Provider</span>
+                <span class="detail-value" id="provider">Google</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Service</span>
+                <span class="detail-value" id="service">IMAP</span>
+            </div>
+        </div>
+        
+        <button class="close-btn" onclick="closeWindow()">Close Window</button>
+        
+        <div class="footer" id="footer-message">
+            This window can be safely closed
+        </div>
+    </div>
+    
+    <script>
+        function closeWindow() {
+            // Try multiple methods to close the window
+            
+            // Method 1: Standard window.close()
+            window.close();
+            
+            // Method 2: Try with opener reference
+            if (window.opener) {
+                window.opener = null;
+                window.close();
+            }
+            
+            // Method 3: Try closing with about:blank
+            window.open('about:blank', '_self').close();
+            
+            // If none of the above worked, show instructions
+            setTimeout(() => {
+                const footer = document.getElementById('footer-message');
+                footer.innerHTML = 'Please close this tab manually (Ctrl+W or Cmd+W)';
+                footer.style.color = '#ef4444';
+                footer.style.fontWeight = '600';
+            }, 100);
+        }
+        
+        // Try to detect if window can be closed programmatically
+        let canClose = false;
+        try {
+            // Check if opened by script or has opener
+            if (window.opener !== null || window.history.length <= 1) {
+                canClose = true;
+            }
+        } catch (e) {
+            canClose = false;
+        }
+        
+        // Auto-close attempt after 3 seconds if possible
+        if (canClose) {
+            setTimeout(() => {
+                closeWindow();
+            }, 3000);
+        } else {
+            // Update footer to indicate manual close needed
+            setTimeout(() => {
+                const footer = document.getElementById('footer-message');
+                footer.innerHTML = 'You can close this tab now (Ctrl+W or Cmd+W)';
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
