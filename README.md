@@ -420,6 +420,126 @@ credentials = flow.credentials
 gcp_oauth.register_imap_credentials(flow, credentials)
 ```
 
+### Using `get_credentials()` - The Main Function
+
+**`get_credentials()` is the primary function you'll use** after initial OAuth setup. This async method retrieves stored credentials for a user and automatically handles token refresh when needed.
+
+#### Function Signature
+
+```python
+async def get_credentials(
+    self,
+    email: str,
+    service: Service,
+    raise_refresh_error: bool = True
+) -> GCPOAuthCredentials | None
+```
+
+#### Parameters
+
+- **`email`** (str): The user's email address associated with the OAuth credentials
+- **`service`** (Service): The service enum (e.g., `Service.IMAP`) to retrieve credentials for
+- **`raise_refresh_error`** (bool, default=True): Whether to raise an exception if token refresh fails
+
+#### Returns
+
+- **`GCPOAuthCredentials`**: Valid, refreshed credentials ready to use
+- **`None`**: If credentials don't exist or refresh fails (when `raise_refresh_error=False`)
+
+#### Usage Example
+
+```python
+from src.oauth import gcp_oauth
+from src.oauth.enums import Service
+from src.oauth.services.exceptions import RefreshError
+
+# In your application code (e.g., when sending an email)
+async def send_email(user_email: str, message: str):
+    try:
+        # Get credentials - will automatically refresh if expired
+        creds = await gcp_oauth.get_credentials(
+            email=user_email,
+            service=Service.IMAP
+        )
+        
+        if creds is None:
+            # User hasn't authorized yet
+            return {"error": "Please authorize your Gmail account first"}
+        
+        # Use credentials with Gmail API
+        # ... your email sending logic here ...
+        
+    except RefreshError as e:
+        # Token refresh failed - user needs to re-authorize
+        return {"error": "Please re-authorize your Gmail account"}
+```
+
+#### Automatic Token Refresh
+
+The function handles token validation and refresh automatically:
+
+1. **Loads** stored credentials from storage (database/file)
+2. **Checks** if credentials are valid (`creds.valid`)
+3. **Refreshes** automatically if expired using the refresh token
+4. **Updates** stored credentials in the background after refresh
+5. **Returns** valid, ready-to-use credentials
+
+#### Error Handling
+
+```python
+# Option 1: Raise exception on refresh failure (default)
+creds = await gcp_oauth.get_credentials(user_email, Service.IMAP)
+# Raises RefreshError if refresh fails
+
+# Option 2: Return None on refresh failure
+creds = await gcp_oauth.get_credentials(
+    user_email, 
+    Service.IMAP,
+    raise_refresh_error=False
+)
+if creds is None:
+    # Handle gracefully - redirect to re-authorization
+    pass
+```
+
+#### Integration Pattern
+
+**Typical workflow in your application:**
+
+```python
+# 1. First-time setup: User authorizes (one-time)
+#    - Generate auth URL with get_imap_auth_url()
+#    - Handle callback with register_imap_credentials()
+
+# 2. Ongoing usage: Retrieve credentials (every API call)
+#    - Call get_credentials() to get valid tokens
+#    - Use returned credentials with provider's API
+#    - Token refresh happens automatically
+
+# Example: Email service class
+class EmailService:
+    async def fetch_emails(self, user_email: str):
+        # This is the only call you need!
+        creds = await gcp_oauth.get_credentials(user_email, Service.IMAP)
+        
+        if not creds:
+            raise ValueError("User not authorized")
+        
+        # Use creds with Gmail API
+        service = build('gmail', 'v1', credentials=creds)
+        results = service.users().messages().list(userId='me').execute()
+        return results
+```
+
+#### Best Practices
+
+- ✅ **Always await**: `get_credentials()` is async - don't forget `await`
+- ✅ **Check for None**: Credentials may not exist for a user
+- ✅ **Handle RefreshError**: Plan for token refresh failures
+- ✅ **Use raised exceptions**: Keep `raise_refresh_error=True` for explicit error handling
+- ✅ **Trust the refresh**: Don't manually check `creds.valid` - the function handles it
+- ✅ **Call frequently**: It's designed to be called for each API operation
+
 #### Framework Integration Examples
 
 **Django**: Call `setup()` in your `AppConfig.ready()` method, handle OAuth in views
